@@ -14,6 +14,8 @@ async function bootstrap() {
     }),
   );
   app.use(cookieParser());
-  await app.listen(app.get(ConfigService).getOrThrow('PORT'));
+  const port =
+    process.env.PORT || app.get(ConfigService).get<number>('PORT') || 3000;
+  await app.listen(port);
 }
 bootstrap();

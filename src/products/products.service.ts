@@ -38,12 +38,13 @@ export class ProductsService {
     }
   }
 
-  async getProducts(status?: string) {
-    const args: Prisma.ProductFindManyArgs = {};
-
-    if (status === 'available') {
-      args.where = { sold: false };
-    }
+  async getProducts(userId: number, status?: string) {
+    const args: Prisma.ProductFindManyArgs = {
+      where: {
+        userId,
+        ...(status === 'available' ? { sold: false } : {}),
+      },
+    };
 
     return await this.prismaService.product.findMany(args);
   }

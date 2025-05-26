@@ -20,9 +20,23 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { TokenPayload } from '../auth/token.payload.interface';
 import { ProductsService } from './products.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { PRODUCT_IMAGES } from './product-images';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'products',
+    public_id: (req, file) => `product-${req.params.productId}`,
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+  },
+});
 
 @Controller('products')
 export class ProductsController {
@@ -39,20 +53,9 @@ export class ProductsController {
 
   @Post(':productId/image')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: PRODUCT_IMAGES,
-        filename: (req, file, callback) => {
-          callback(
-            null,
-            `${req.params.productId}${extname(file.originalname)}`,
-          );
-        },
-      }),
-    }),
-  )
-  uploadProductImage(
+  @UseInterceptors(FileInterceptor('image', { storage }))
+  async uploadProductImage(
+    @Param('productId') productId: string,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -61,8 +64,16 @@ export class ProductsController {
         ],
       }),
     )
-    _file: Express.Multer.File,
-  ) {}
+    file: Express.Multer.File,
+  ) {
+    const parsedProductId = parseInt(productId, 10);
+
+    await this.productService.updateProductImage(parsedProductId, file.path);
+
+    return {
+      imageUrl: file.path,
+    };
+  }
 
   @Get()
   @UseGuards(JwtAuthGuard)

@@ -22,4 +22,5 @@ model Product {
   userId      Int
   sold        Boolean @default(false)
   user        User    @relation(fields: [userId], references: [id])
+  imageUrl    String?
 }

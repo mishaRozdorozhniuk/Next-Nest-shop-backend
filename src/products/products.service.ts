@@ -27,6 +27,17 @@ export class ProductsService {
     return product;
   }
 
+  async updateProductImage(productId: number, imageUrl: string) {
+    try {
+      return await this.prismaService.product.update({
+        where: { id: productId },
+        data: { imageUrl },
+      });
+    } catch (error) {
+      throw new NotFoundException('Product not found');
+    }
+  }
+
   async getProducts(status?: string) {
     const args: Prisma.ProductFindManyArgs = {};
 

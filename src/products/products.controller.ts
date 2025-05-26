@@ -30,12 +30,12 @@ cloudinary.config({
 });
 
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
+  cloudinary,
+  params: async (req, file) => ({
     folder: 'products',
-    public_id: (req, file) => `product-${req.params.productId}`,
+    public_id: `product-${req.params.productId}`,
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-  },
+  }),
 });
 
 @Controller('products')

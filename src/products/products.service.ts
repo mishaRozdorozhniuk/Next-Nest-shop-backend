@@ -45,12 +45,7 @@ export class ProductsService {
       args.where = { sold: false };
     }
 
-    const products = await this.prismaService.product.findMany(args);
-
-    return products.map((product) => ({
-      ...product,
-      imageExists: !!product.imageUrl,
-    }));
+    return await this.prismaService.product.findMany(args);
   }
 
   async update(productId: number, data: Prisma.ProductUpdateInput) {

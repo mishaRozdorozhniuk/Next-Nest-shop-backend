@@ -77,8 +77,11 @@ export class ProductsController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getProducts(@Query('status') status: string) {
-    return await this.productService.getProducts(status);
+  async getProducts(
+    @Query('status') status: string,
+    @CurrentUser() user: TokenPayload,
+  ) {
+    return await this.productService.getProducts(user.userId, status);
   }
 
   @Delete(':productId')

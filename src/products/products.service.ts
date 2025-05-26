@@ -47,17 +47,10 @@ export class ProductsService {
 
     const products = await this.prismaService.product.findMany(args);
 
-    return Promise.all(
-      products.map(async (product) => {
-        const imageInfo = await this.imageExists(product.id);
-
-        return {
-          ...product,
-          imageExists: imageInfo.exists,
-          imageExtension: imageInfo.extension,
-        };
-      }),
-    );
+    return products.map((product) => ({
+      ...product,
+      imageExists: !!product.imageUrl,
+    }));
   }
 
   async update(productId: number, data: Prisma.ProductUpdateInput) {
@@ -143,7 +136,6 @@ export class ProductsService {
       return {
         ...product,
         imageExists: image.exists,
-        imageExtension: image.extension,
       };
     } catch (error) {
       throw new NotFoundException('Product not found');

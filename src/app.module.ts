@@ -32,7 +32,8 @@ import { CheckoutModule } from './checkout/checkout.module';
       inject: [ConfigService],
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
+      rootPath: join(process.cwd(), 'public'),
+      serveRoot: '/public/',
     }),
     ConfigModule.forRoot(),
     UsersModule,

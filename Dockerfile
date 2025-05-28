@@ -4,11 +4,12 @@ WORKDIR /app
 
 COPY package*.json ./
 
-COPY . .
 RUN npm install
 
-RUN npx prisma generate
+COPY . .
 
-EXPOSE 3001
+RUN npm run build
+
+RUN npx prisma generate
 
 CMD ["npm", "run", "start:prod"]

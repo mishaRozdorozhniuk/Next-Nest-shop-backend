@@ -1,1 +1,1 @@
-![Описание](./public/image.png)
+![Description](./public/image.png)

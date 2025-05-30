@@ -1,1 +1,1 @@
-![Description](./public/image.png)
+![Description](./diagram.png)

@@ -21,6 +21,6 @@ model Product {
   price       Float
   userId      Int
   sold        Boolean @default(false)
-  user        User    @relation(fields: [userId], references: [id])
   imageUrl    String?
+  user        User    @relation(fields: [userId], references: [id])
 }

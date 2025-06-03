@@ -13,6 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         (req: Request) => req?.cookies?.Authentication,
       ]),
+      ignoreExpiration: false,
       secretOrKey: configService.getOrThrow('JWT_SECRET'),
     });
   }

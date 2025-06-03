@@ -18,6 +18,48 @@ export class AuthService {
   login(user: User, response: Response) {
     const jwtExpirationString =
       this.configService.getOrThrow<string>('JWT_EXPIRATION');
+    const jwtRefreshExpirationString = this.configService.getOrThrow<string>(
+      'JWT_REFRESH_EXPIRATION',
+    );
+
+    const expMilliseconds = this.parseExpirationToMs(jwtExpirationString);
+    const expires = new Date(Date.now() + expMilliseconds);
+
+    const tokenPayload: TokenPayload = {
+      userId: user.id,
+    };
+
+    const accessToken = this.jwtService.sign(tokenPayload, {
+      secret: this.configService.get('JWT_ACCESS'),
+      expiresIn: jwtExpirationString,
+    });
+
+    const refreshToken = this.jwtService.sign(tokenPayload, {
+      secret: this.configService.get('JWT_REFRESH'),
+      expiresIn: jwtRefreshExpirationString,
+    });
+
+    response.cookie('Authentication', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      expires,
+    });
+
+    response.cookie('Refresh', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    return { tokenPayload };
+  }
+
+  refresh(user: User, response: Response) {
+    const jwtExpirationString =
+      this.configService.getOrThrow<string>('JWT_EXPIRATION');
 
     const expMilliseconds = this.parseExpirationToMs(jwtExpirationString);
 
@@ -28,15 +70,32 @@ export class AuthService {
       userId: user.id,
     };
 
-    const token = this.jwtService.sign(tokenPayload);
+    const accessToken = this.jwtService.sign(tokenPayload, {
+      secret: this.configService.get('JWT_ACCESS'),
+      expiresIn: this.configService.get('JWT_EXPIRATION'),
+    });
 
-    response.cookie('Authentication', token, {
-      secure: false,
-      httpOnly: false,
+    const refreshToken = this.jwtService.sign(tokenPayload, {
+      secret: this.configService.get('JWT_REFRESH'),
+      expiresIn: this.configService.get('JWT_REFRESH_EXPIRATION'),
+    });
+
+    response.cookie('Authentication', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
       expires,
     });
+
+    response.cookie('Refresh', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    console.log(tokenPayload, 'tokenPayload');
 
     return { tokenPayload };
   }

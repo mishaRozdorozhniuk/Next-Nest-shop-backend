@@ -44,7 +44,7 @@ import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { CreateUserRequest } from './dto/create-user.request';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -70,7 +70,7 @@ export class UsersService {
     }
   }
 
-  async getUser(filter: Prisma.UserWhereUniqueInput) {
+  async getUser(filter: Prisma.UserWhereUniqueInput): Promise<User> {
     return this.prismaService.user.findUniqueOrThrow({
       where: filter,
     });

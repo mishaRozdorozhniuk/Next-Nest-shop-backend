@@ -16,19 +16,18 @@ export class CheckoutService {
 
     return this.stripe.checkout.sessions.create({
       metadata: {
-        productId,
+        productId: productId.toString(),
       },
       payment_method_types: ['card'],
-
       line_items: [
         {
           price_data: {
             currency: 'usd',
             product_data: {
               name: product.name,
-              description: product.description,
+              description: product.description || undefined,
             },
-            unit_amount: product.price * 100,
+            unit_amount: Math.round(product.price * 100),
           },
           quantity: 1,
         },
@@ -48,11 +47,17 @@ export class CheckoutService {
       event.data.object.id,
     );
 
-    if (!session?.metadata || !session.metadata.productId) {
+    if (!session?.metadata?.productId) {
       throw new Error('Session metadata or productId is missing');
     }
 
-    await this.productService.update(parseInt(session.metadata.productId), {
+    const productId = parseInt(session.metadata.productId, 10);
+
+    if (isNaN(productId)) {
+      throw new Error('Invalid productId in session metadata');
+    }
+
+    await this.productService.update(productId, {
       sold: true,
     });
   }

@@ -14,11 +14,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         (req: Request) => req?.cookies?.Authentication,
       ]),
       ignoreExpiration: false,
-      secretOrKey: configService.getOrThrow('JWT_SECRET'),
+      secretOrKey: configService.getOrThrow('JWT_ACCESS'),
     });
   }
 
   validate(payload: TokenPayload) {
-    return payload;
+    return {
+      userId: payload.userId,
+      roles: payload.roles,
+      permissions: payload.permissions,
+    };
   }
 }

@@ -8,13 +8,14 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { HealthController } from 'src/health.controller';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { PrismaClient } from '@prisma/client';
 
 @Module({
   imports: [
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.getOrThrow('JWT_SECRET'),
+        secret: configService.getOrThrow('JWT_ACCESS'),
         signOptions: {
           expiresIn: configService.getOrThrow('JWT_EXPIRATION'),
         },
@@ -25,7 +26,13 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
     UsersModule,
   ],
   controllers: [AuthController, HealthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    PrismaClient,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

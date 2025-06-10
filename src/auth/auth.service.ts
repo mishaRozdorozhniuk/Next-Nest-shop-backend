@@ -1,11 +1,24 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
+import { PrismaClient, User } from '@prisma/client';
 import { Response } from 'express';
 import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { TokenPayload } from './token.payload.interface';
+
+type UserWithRoles = User & {
+  roles: Array<{
+    role: {
+      name: string;
+      permissions: Array<{
+        permission: {
+          name: string;
+        };
+      }>;
+    };
+  }>;
+};
 
 @Injectable()
 export class AuthService {
@@ -13,9 +26,11 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
+    private readonly prisma: PrismaClient,
   ) {}
 
-  login(user: User, response: Response) {
+  async login(user: User, response: Response) {
+    console.log(user, 'user in auth service');
     const jwtExpirationString =
       this.configService.getOrThrow<string>('JWT_EXPIRATION');
     const jwtRefreshExpirationString = this.configService.getOrThrow<string>(
@@ -25,9 +40,41 @@ export class AuthService {
     const expMilliseconds = this.parseExpirationToMs(jwtExpirationString);
     const expires = new Date(Date.now() + expMilliseconds);
 
+    const userWithRoles = (await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })) as UserWithRoles | null;
+
+    if (!userWithRoles) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const roles: string[] = userWithRoles.roles.map((r) => r.role.name);
+    const permissions: string[] = userWithRoles.roles.flatMap((r) =>
+      r.role.permissions.map((p) => p.permission.name),
+    );
+
     const tokenPayload: TokenPayload = {
       userId: user.id,
+      roles,
+      permissions,
     };
+
+    console.log(tokenPayload, 'token payload in auth service');
 
     const accessToken = this.jwtService.sign(tokenPayload, {
       secret: this.configService.get('JWT_ACCESS'),
@@ -57,27 +104,58 @@ export class AuthService {
     return { tokenPayload };
   }
 
-  refresh(user: User, response: Response) {
+  async refresh(user: User, response: Response) {
     const jwtExpirationString =
       this.configService.getOrThrow<string>('JWT_EXPIRATION');
+    const jwtRefreshExpirationString = this.configService.getOrThrow<string>(
+      'JWT_REFRESH_EXPIRATION',
+    );
 
     const expMilliseconds = this.parseExpirationToMs(jwtExpirationString);
+    const expires = new Date(Date.now() + expMilliseconds);
 
-    const expires = new Date();
-    expires.setTime(expires.getTime() + expMilliseconds);
+    const userWithRoles = (await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })) as UserWithRoles | null;
+
+    if (!userWithRoles) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const roles: string[] = userWithRoles.roles.map((r) => r.role.name);
+    const permissions: string[] = userWithRoles.roles.flatMap((r) =>
+      r.role.permissions.map((p) => p.permission.name),
+    );
 
     const tokenPayload: TokenPayload = {
       userId: user.id,
+      roles,
+      permissions,
     };
 
     const accessToken = this.jwtService.sign(tokenPayload, {
       secret: this.configService.get('JWT_ACCESS'),
-      expiresIn: this.configService.get('JWT_EXPIRATION'),
+      expiresIn: jwtExpirationString,
     });
 
     const refreshToken = this.jwtService.sign(tokenPayload, {
       secret: this.configService.get('JWT_REFRESH'),
-      expiresIn: this.configService.get('JWT_REFRESH_EXPIRATION'),
+      expiresIn: jwtRefreshExpirationString,
     });
 
     response.cookie('Authentication', accessToken, {
@@ -94,8 +172,6 @@ export class AuthService {
       sameSite: 'lax',
       path: '/',
     });
-
-    console.log(tokenPayload, 'tokenPayload');
 
     return { tokenPayload };
   }
@@ -132,6 +208,7 @@ export class AuthService {
   async verifyUser(email: string, password: string) {
     try {
       const user = await this.usersService.getUser({ email });
+      console.log(user);
       const authenticated = await bcrypt.compare(password, user.password);
       if (!authenticated) {
         throw new UnauthorizedException();
@@ -142,7 +219,7 @@ export class AuthService {
     }
   }
 
-  verifyToken(token: string) {
-    this.jwtService.verify(token);
+  verifyToken(token: string): TokenPayload {
+    return this.jwtService.verify<TokenPayload>(token);
   }
 }

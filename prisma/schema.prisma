@@ -8,19 +8,53 @@ datasource db {
 }
 
 model User {
-  id       Int       @id @default(autoincrement())
-  email    String    @unique
+  id       Int              @id @default(autoincrement())
+  email    String           @unique
   password String
   products Product[]
+  roles    UserRoleOnUser[]
+}
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  permissions RolePermission[]
+  users       UserRoleOnUser[]
+}
+
+model Permission {
+  id    Int              @id @default(autoincrement())
+  name  String           @unique
+  roles RolePermission[]
+}
+
+model UserRoleOnUser {
+  userId Int
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id])
+  user   User @relation(fields: [userId], references: [id])
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+
+  @@id([roleId, permissionId])
 }
 
 model Product {
-  id          Int     @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
-  description String
+  description String?
   price       Float
   userId      Int
-  sold        Boolean @default(false)
+  createdAt   DateTime @default(now())
   imageUrl    String?
-  user        User    @relation(fields: [userId], references: [id])
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+  sold        Boolean  @default(false)
 }
